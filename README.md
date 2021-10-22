@@ -27,7 +27,7 @@ To run our evaluation code, please create your environment based on following de
 3. Place these three model folders at the root path.
 
 ```tree
-InverseRenderNet++
+InverseRenderNet_v2
 │   README.md
 │   test.py    
 │   ...
