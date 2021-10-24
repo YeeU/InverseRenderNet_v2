@@ -65,7 +65,7 @@ Other than running test on the provided demo image, you can test your own images
 * Make sure `IMAGES_DIR` in [run_test_iiw.sh](run_test_iiw.sh) point to the path of IIW data and run:
 
 ```bash
-python3 run_test_iiw.sh
+bash run_test_iiw.sh
 ```
 
 Results will be saved to **test_iiw**.
@@ -77,7 +77,7 @@ Results will be saved to **test_iiw**.
 * Replace `${IMAGES_DIR}` defined in [run_test_diode.sh](run_test_diode.sh) with the path to DIODE data and run:
 
 ```bash
-python3 run_test_diode.sh
+bash run_test_diode.sh
 ```
 
 Results will be saved to **test_diode**.
