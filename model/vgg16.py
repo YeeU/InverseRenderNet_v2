@@ -1,0 +1,144 @@
+"""
+code cloned from
+https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg16.py
+"""
+
+
+import numpy as np
+import os
+import tensorflow as tf
+import time
+
+
+VGG_MEAN = [103.939, 116.779, 123.68]
+
+
+class Vgg16:
+    def __init__(self, vgg16_npy_path):
+        self.initialized = False
+        self.vgg16_npy_path = vgg16_npy_path
+        print("npy file loaded")
+
+    def build(self, rgb):
+        """
+        load variable from npy to build the VGG
+        :param rgb: rgb image [batch, height, width, 3] values scaled [-1, 1]
+        """
+
+        start_time = time.time()
+        print("build model started")
+
+        # rgb_scaled = (rgb + 1) * 255.0 / 2.
+        rgb_scaled = rgb * 255.0
+        # Convert RGB to BGR
+        red, green, blue = tf.split(axis=3, num_or_size_splits=3, value=rgb_scaled)
+        bgr = tf.concat(
+            axis=3,
+            values=[
+                blue - VGG_MEAN[0],
+                green - VGG_MEAN[1],
+                red - VGG_MEAN[2],
+            ],
+        )
+
+        self.data_dict = np.load(
+            self.vgg16_npy_path, encoding="latin1", allow_pickle=True
+        ).item()
+        layer_dict = dict()
+        with tf.variable_scope("vgg16", reuse=self.initialized):
+            layer_dict["conv1_1"] = self.conv_layer(bgr, "conv1_1")
+            layer_dict["conv1_2"] = self.conv_layer(layer_dict["conv1_1"], "conv1_2")
+            layer_dict["pool1"] = self.max_pool(layer_dict["conv1_2"], "pool1")
+
+            # layer_dict['conv2_1'] = self.conv_layer(
+            # 	layer_dict['pool1'], 'conv2_1')
+            # layer_dict['conv2_2'] = self.conv_layer(
+            # layer_dict['conv2_1'], 'conv2_2')
+            # layer_dict['pool2'] = self.max_pool(
+            # 	layer_dict['conv2_2'], 'pool2')
+
+            # layer_dict['conv3_1'] = self.conv_layer(
+            # 	layer_dict['pool2'], 'conv3_1')
+            # layer_dict['conv3_2'] = self.conv_layer(
+            # 	layer_dict['conv3_1'], 'conv3_2')
+            # layer_dict['conv3_3'] = self.conv_layer(
+            # 	layer_dict['conv3_2'], 'conv3_3')
+            # layer_dict['pool3'] = self.max_pool(
+            # layer_dict['conv3_3'], 'pool3')
+
+            # layer_dict['conv4_1'] = self.conv_layer(
+            # 	layer_dict['pool3'], 'conv4_1')
+            # layer_dict['conv4_2'] = self.conv_layer(
+            # 	layer_dict['conv4_1'], 'conv4_2')
+            # layer_dict['conv4_3'] = self.conv_layer(
+            # 	layer_dict['conv4_2'], 'conv4_3')
+            # layer_dict['pool4'] = self.max_pool(layer_dict['conv4_3'], 'pool4')
+
+            # layer_dict['conv5_1'] = self.conv_layer(
+            # 	layer_dict['pool4'], 'conv5_1')
+            # layer_dict['conv5_2'] = self.conv_layer(
+            # 	layer_dict['conv5_1'], 'conv5_2')
+            # layer_dict['conv5_3'] = self.conv_layer(
+            # 	layer_dict['conv5_2'], 'conv5_3')
+            # layer_dict['pool5'] = self.max_pool(layer_dict['conv5_3'], 'pool5')
+
+        self.data_dict = None
+        self.initialized = True
+        return layer_dict
+
+    def get_vgg_activations(self, rgb, layer_names):
+        layer_dict = self.build(rgb)
+        # validate_names = reduce(lambda f1, f2: f1 & f2,
+        # 						[layer_dict.has_key(x) for x in layer_names])
+        # assert validate_names, 'invalid vgg16 layer name(s): %s' % str(layer_names)
+        activations = [layer_dict[k] for k in layer_names]
+        return activations
+
+    def avg_pool(self, bottom, name):
+        return tf.nn.avg_pool(
+            bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name=name
+        )
+
+    def max_pool(self, bottom, name):
+        return tf.nn.max_pool(
+            bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name=name
+        )
+
+    def conv_layer(self, bottom, name):
+        with tf.variable_scope(name):
+            filt = self.get_conv_filter(name)
+
+            conv = tf.nn.conv2d(bottom, filt, [1, 1, 1, 1], padding="SAME")
+
+            conv_biases = self.get_bias(name)
+            bias = tf.nn.bias_add(conv, conv_biases)
+
+            relu = tf.nn.relu(bias)
+            return relu
+
+    def fc_layer(self, bottom, name):
+        with tf.variable_scope(name):
+            shape = bottom.get_shape().as_list()
+            dim = 1
+            for d in shape[1:]:
+                dim *= d
+            x = tf.reshape(bottom, [-1, dim])
+
+            weights = self.get_fc_weight(name)
+            biases = self.get_bias(name)
+
+            # Fully connected layer. Note that the '+' operation automatically
+            # broadcasts the biases.
+            fc = tf.nn.bias_add(tf.matmul(x, weights), biases)
+
+            return fc
+
+    def get_conv_filter(self, name):
+        return tf.constant(self.data_dict[name][0], name="filter")
+
+    def get_bias(self, name):
+        return tf.constant(self.data_dict[name][1], name="biases")
+
+    def get_fc_weight(self, name):
+        return tf.constant(self.data_dict[name][0], name="weights")
+
