@@ -299,7 +299,7 @@ def comp_light(inputs, albedos, normals, shadows, gamma, masks):
     albedos = rescale_2_zero_one(albedos)
     shadows = rescale_2_zero_one(shadows)
 
-    lighting_model = "../hdr_illu_pca"
+    lighting_model = "./hdr_illu_pca"
     lighting_vectors = tf.constant(
         np.load(os.path.join(lighting_model, "pcaVector.npy")), dtype=tf.float32
     )
